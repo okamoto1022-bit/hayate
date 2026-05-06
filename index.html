@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="颯希トレ">
+<meta name="theme-color" content="#E8321A">
+<link rel="manifest" href="manifest.json">
+<title>颯希のトレーニング</title>
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root {
+  --red: #E8321A;
+  --green: #1A9E6A;
+  --green-light: #E6F7F1;
+  --bg: #F7F6F4;
+  --card: #FFFFFF;
+  --text: #1A1A1A;
+  --sub: #888;
+  --border: rgba(0,0,0,0.08);
+  --r: 16px;
+  --r-sm: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; overscroll-behavior: none; }
+
+#splash { position: fixed; inset: 0; background: var(--red); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999; transition: opacity 0.5s; }
+#splash.hide { opacity: 0; pointer-events: none; }
+.splash-icon { font-size: 80px; margin-bottom: 16px; }
+.splash-title { font-size: 28px; font-weight: 700; color: white; }
+.splash-sub { font-size: 14px; color: rgba(255,255,255,0.7); margin-top: 8px; }
+
+.header { background: var(--red); padding: calc(env(safe-area-inset-top,44px) + 12px) 20px 16px; color: white; position: sticky; top: 0; z-index: 10; }
+.header-row { display: flex; justify-content: space-between; align-items: flex-start; }
+.app-name { font-size: 11px; letter-spacing: 2px; opacity: 0.7; text-transform: uppercase; margin-bottom: 3px; }
+.app-title { font-size: 22px; font-weight: 700; }
+.header-btns { display: flex; gap: 8px; align-items: center; }
+.streak-pill { background: rgba(255,255,255,0.2); border-radius: 99px; padding: 6px 12px; font-size: 13px; font-weight: 500; }
+.edit-btn { background: rgba(255,255,255,0.2); border: none; border-radius: 99px; padding: 6px 12px; font-size: 13px; color: white; cursor: pointer; font-family: inherit; }
+.today-label { font-size: 13px; opacity: 0.75; margin-top: 8px; }
+
+.tabs-wrap { background: var(--card); border-bottom: 1px solid var(--border); display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 0 4px; position: sticky; top: calc(env(safe-area-inset-top,44px) + 74px); z-index: 9; }
+.tabs-wrap::-webkit-scrollbar { display: none; }
+.tab { flex-shrink: 0; min-width: 44px; padding: 11px 10px 9px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; border-bottom: 3px solid transparent; color: var(--sub); }
+.tab-day { font-size: 14px; font-weight: 700; }
+.tab-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: background 0.2s; }
+.tab.active { color: var(--red); border-bottom-color: var(--red); }
+.tab.done .tab-dot { background: var(--green); }
+.tab.is-today .tab-day { color: var(--red); }
+
+.content { padding: 16px; padding-bottom: calc(env(safe-area-inset-bottom,20px) + 16px); }
+.day-header { background: var(--card); border-radius: var(--r); padding: 14px 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+.day-theme { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--red); text-transform: uppercase; margin-bottom: 2px; }
+.day-name { font-size: 18px; font-weight: 700; }
+
+.progress-card { background: var(--card); border-radius: var(--r); padding: 14px 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+.progress-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.progress-label { font-size: 13px; color: var(--sub); }
+.progress-count { font-size: 15px; font-weight: 700; }
+.bar-bg { height: 8px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--green); border-radius: 99px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+
+.exercises-card { background: var(--card); border-radius: var(--r); border: 1px solid var(--border); margin-bottom: 12px; overflow: hidden; }
+.ex-item { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; -webkit-user-select: none; user-select: none; }
+.ex-item:last-child { border-bottom: none; }
+.ex-item:active { background: var(--bg); }
+.check-btn { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); transition: all 0.2s; font-size: 14px; color: transparent; }
+.check-btn.done { background: var(--green); border-color: var(--green); color: white; }
+.ex-text { flex: 1; min-width: 0; }
+.ex-name { font-size: 15px; font-weight: 500; line-height: 1.3; transition: color 0.2s; }
+.ex-item.done .ex-name { color: var(--sub); text-decoration: line-through; text-decoration-color: var(--green); }
+.ex-detail { font-size: 12px; color: var(--sub); margin-top: 2px; }
+
+.complete-banner { background: var(--green-light); border: 1px solid rgba(26,158,106,0.2); border-radius: var(--r); padding: 16px; margin-bottom: 12px; display: none; }
+.complete-banner.show { display: block; }
+.complete-title { font-size: 16px; font-weight: 700; color: var(--green); margin-bottom: 3px; }
+.complete-sub { font-size: 13px; color: #1A9E6A; opacity: 0.85; }
+
+.rest-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 36px 20px; text-align: center; margin-bottom: 12px; }
+.rest-emoji { font-size: 48px; margin-bottom: 14px; }
+.rest-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+.rest-sub { font-size: 14px; color: var(--sub); line-height: 1.8; }
+
+.weekly-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; margin-bottom: 12px; }
+.weekly-title { font-size: 11px; font-weight: 700; color: var(--sub); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+.dots-row { display: flex; gap: 4px; }
+.dot-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.dot-circle { width: 34px; height: 34px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--sub); transition: all 0.2s; }
+.dot-circle.done { background: var(--green); border-color: var(--green); color: white; font-size: 15px; }
+.dot-circle.rest { background: #E6EEFF; border-color: rgba(26,106,232,0.2); color: #1A6AE8; }
+.dot-circle.today-ring { box-shadow: 0 0 0 2.5px var(--red); }
+.dot-label { font-size: 10px; color: var(--sub); }
+
+.reset-btn { width: 100%; padding: 13px; background: transparent; border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 13px; color: var(--sub); font-family: inherit; cursor: pointer; margin-bottom: 8px; }
+.reset-btn:active { background: var(--bg); }
+
+/* 管理画面 */
+.admin-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: none; }
+.admin-overlay.show { display: block; }
+.admin-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-radius: 20px 20px 0 0; z-index: 101; max-height: 92dvh; display: none; flex-direction: column; }
+.admin-sheet.show { display: flex; }
+.admin-handle { width: 36px; height: 4px; background: var(--border); border-radius: 99px; margin: 12px auto 0; flex-shrink: 0; }
+.admin-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.admin-title { font-size: 17px; font-weight: 700; }
+.admin-close { background: var(--bg); border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 16px; cursor: pointer; color: var(--sub); }
+.admin-body { overflow-y: auto; flex: 1; padding: 16px; -webkit-overflow-scrolling: touch; }
+.admin-day-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.admin-day-tab { padding: 6px 14px; border-radius: 99px; border: 1.5px solid var(--border); font-size: 13px; font-weight: 700; cursor: pointer; color: var(--sub); background: var(--card); }
+.admin-day-tab.active { background: var(--red); border-color: var(--red); color: white; }
+.admin-label { font-size: 12px; font-weight: 700; color: var(--sub); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+.admin-input { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: 15px; font-family: inherit; color: var(--text); background: var(--bg); outline: none; margin-bottom: 14px; }
+.admin-input:focus { border-color: var(--red); background: white; }
+.admin-ex-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.admin-ex-card { background: var(--bg); border-radius: var(--r-sm); padding: 12px; border: 1px solid var(--border); }
+.admin-ex-row { display: flex; gap: 8px; align-items: flex-start; }
+.admin-ex-inputs { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.admin-ex-input { padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; color: var(--text); background: white; outline: none; width: 100%; }
+.admin-ex-input:focus { border-color: var(--red); }
+.admin-ex-input.detail { font-size: 13px; color: var(--sub); }
+.del-btn { width: 32px; height: 32px; border-radius: 50%; background: #FFE5E5; border: none; color: var(--red); font-size: 18px; cursor: pointer; flex-shrink: 0; margin-top: 4px; }
+.add-ex-btn { width: 100%; padding: 12px; border: 2px dashed var(--border); border-radius: var(--r-sm); background: transparent; font-size: 14px; color: var(--sub); cursor: pointer; font-family: inherit; }
+.add-ex-btn:active { background: var(--bg); }
+.save-btn { width: 100%; padding: 14px; background: var(--red); border: none; border-radius: var(--r-sm); font-size: 16px; font-weight: 700; color: white; cursor: pointer; font-family: inherit; margin-top: 16px; }
+.save-btn:active { opacity: 0.85; }
+.rest-toggle { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg); border-radius: var(--r-sm); margin-bottom: 14px; }
+.rest-toggle-label { font-size: 14px; font-weight: 500; }
+.toggle { position: relative; width: 44px; height: 26px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: var(--border); border-radius: 99px; cursor: pointer; transition: 0.3s; }
+.toggle-slider:before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+input:checked + .toggle-slider { background: var(--red); }
+input:checked + .toggle-slider:before { transform: translateX(18px); }
+.saved-toast { position: fixed; bottom: calc(env(safe-area-inset-bottom,20px) + 16px); left: 50%; transform: translateX(-50%); background: #1A1A1A; color: white; font-size: 13px; padding: 10px 20px; border-radius: 99px; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+.saved-toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="splash-icon">⚡</div>
+  <div class="splash-title">颯希のトレーニング</div>
+  <div class="splash-sub">中学生・短距離・室内対応</div>
+</div>
+
+<div class="header">
+  <div class="header-row">
+    <div>
+      <div class="app-name">Hayate Training</div>
+      <div class="app-title">颯希のトレーニング</div>
+    </div>
+    <div class="header-btns">
+      <div class="streak-pill">🔥 <span id="streak-num">0</span>日連続</div>
+      <button class="edit-btn" onclick="openAdmin()">✏️ 編集</button>
+    </div>
+  </div>
+  <div class="today-label" id="today-label"></div>
+</div>
+
+<div class="tabs-wrap" id="tabs"></div>
+<div class="content" id="content"></div>
+
+<div class="admin-overlay" id="admin-overlay" onclick="closeAdmin()"></div>
+<div class="admin-sheet" id="admin-sheet">
+  <div class="admin-handle"></div>
+  <div class="admin-header">
+    <span class="admin-title">✏️ メニューを編集</span>
+    <button class="admin-close" onclick="closeAdmin()">✕</button>
+  </div>
+  <div class="admin-body">
+    <div class="admin-day-tabs" id="admin-day-tabs"></div>
+    <div id="admin-editor"></div>
+    <button class="save-btn" onclick="saveAdmin()">💾 保存する</button>
+  </div>
+</div>
+
+<div class="saved-toast" id="saved-toast">✅ 保存しました！</div>
+
+<script>
+const DEFAULT_DAYS = [
+  { label:'月', theme:'MONDAY', name:'下半身＆体幹', exercises:[
+    {name:'ウォームアップ・ストレッチ', detail:'5分'},
+    {name:'スクワット（3秒ゆっくり下げる）', detail:'3セット × 15回'},
+    {name:'ランジ（左右交互）', detail:'3セット × 10回'},
+    {name:'片脚デッドリフト（バランス重視）', detail:'2セット × 8回'},
+    {name:'プランク', detail:'30秒 × 3セット'},
+    {name:'クールダウン・ストレッチ', detail:'5分'},
+  ]},
+  { label:'火', theme:'TUESDAY', name:'スプリントドリル', exercises:[
+    {name:'ウォームアップ', detail:'5分'},
+    {name:'その場もも上げ（全力）', detail:'5秒 × 5本 ／ 間30秒休憩'},
+    {name:'腕振りドリル（椅子に座って）', detail:'30秒 × 4セット'},
+    {name:'踵引きつけ（その場）', detail:'5秒 × 5本'},
+    {name:'体幹ツイスト', detail:'20回 × 3セット'},
+    {name:'クールダウン・ストレッチ', detail:'5分'},
+  ]},
+  { label:'水', theme:'WEDNESDAY', name:'アクティブ休養', rest:true, exercises:[
+    {name:'全身ストレッチ', detail:'15〜20分'},
+    {name:'股関節まわし・足首回し', detail:'各方向10回'},
+    {name:'呼吸法（鼻4秒・口8秒）', detail:'5分'},
+  ]},
+  { label:'木', theme:'THURSDAY', name:'爆発力＆上半身', exercises:[
+    {name:'ウォームアップ', detail:'5分'},
+    {name:'ジャンプスクワット（着地はゆっくり・静音）', detail:'3セット × 8回'},
+    {name:'腕立て伏せ（肩甲骨を意識）', detail:'3セット × 12回'},
+    {name:'ヒップリフト（片足）', detail:'3セット × 12回'},
+    {name:'バーピー（静音版）', detail:'5回 × 3セット'},
+    {name:'クールダウン・ストレッチ', detail:'5分'},
+  ]},
+  { label:'金', theme:'FRIDAY', name:'スプリントドリル強化', exercises:[
+    {name:'ウォームアップ', detail:'5分'},
+    {name:'その場もも上げ（全力）', detail:'7秒 × 6本 ／ 間45秒休憩'},
+    {name:'壁押しドリル（スタートフォーム）', detail:'10秒 × 5本'},
+    {name:'腕振り＋足踏み連動', detail:'30秒 × 4セット'},
+    {name:'コアブレーシング（体幹を固める）', detail:'5秒 × 10回'},
+    {name:'クールダウン・ストレッチ', detail:'5分'},
+  ]},
+  { label:'土', theme:'SATURDAY', name:'強化 or 屋外', exercises:[
+    {name:'公園ダッシュ30m（天気が良ければ）', detail:'5本'},
+    {name:'室内の場合：月＋木の複合（70%強度）', detail:'約40分'},
+    {name:'クールダウン・ストレッチ', detail:'10分'},
+  ]},
+  { label:'日', theme:'SUNDAY', name:'完全休養', fullRest:true, rest:true, exercises:[] },
+];
+
+function loadDays() { try { return JSON.parse(localStorage.getItem('h_days')) || DEFAULT_DAYS; } catch { return DEFAULT_DAYS; } }
+function saveDays(d) { localStorage.setItem('h_days', JSON.stringify(d)); }
+
+let DAYS = loadDays();
+const todayIdx = (() => { const d = new Date().getDay(); return d===0?6:d-1; })();
+let currentDay = todayIdx;
+let adminDay = 0;
+let checked = (() => { try { return JSON.parse(localStorage.getItem('h_checked')||'{}'); } catch { return {}; } })();
+
+function saveChecked() { localStorage.setItem('h_checked', JSON.stringify(checked)); }
+function key(d,e) { return `d${d}_e${e}`; }
+function isDayDone(di) {
+  const day = DAYS[di];
+  if (day.fullRest) return true;
+  return day.exercises.length > 0 && day.exercises.every((_,i) => checked[key(di,i)]);
+}
+function countDone(di) { return DAYS[di].exercises.filter((_,i) => checked[key(di,i)]).length; }
+function calcStreak() { let s=0; for(let i=todayIdx;i>=0;i--){if(isDayDone(i))s++;else break;} return s; }
+
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = DAYS.map((d,i) =>
+    `<div class="tab ${i===currentDay?'active':''} ${isDayDone(i)?'done':''} ${i===todayIdx?'is-today':''}" onclick="switchDay(${i})">
+      <span class="tab-day">${d.label}</span><span class="tab-dot"></span>
+    </div>`).join('');
+}
+
+function renderWeekly() {
+  return `<div class="weekly-card"><div class="weekly-title">今週の進捗</div><div class="dots-row">${
+    DAYS.map((d,i) => {
+      const done=isDayDone(i), cls=done?'done':d.fullRest?'rest':'', ring=i===todayIdx?'today-ring':'';
+      return `<div class="dot-col"><div class="dot-circle ${cls} ${ring}">${done?'✓':d.fullRest?'🌙':d.label}</div><div class="dot-label">${d.label}</div></div>`;
+    }).join('')}</div></div>`;
+}
+
+function renderContent() {
+  const day = DAYS[currentDay];
+  const el = document.getElementById('content');
+  if (day.fullRest) {
+    el.innerHTML = `<div class="rest-card"><div class="rest-emoji">🌙</div><div class="rest-title">今日は完全休養日</div><div class="rest-sub">食事・睡眠を最優先。<br>成長ホルモンは休養中に分泌される！<br>しっかり休むことも練習のうち。</div></div>${renderWeekly()}`;
+    return;
+  }
+  const total=day.exercises.length, done=countDone(currentDay), pct=total?Math.round(done/total*100):0;
+  el.innerHTML = `
+    <div class="day-header"><div class="day-theme">${day.theme}</div><div class="day-name">${day.name}</div></div>
+    <div class="progress-card">
+      <div class="progress-row"><span class="progress-label">今日の進捗</span><span class="progress-count">${done} / ${total}</span></div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="complete-banner ${done===total&&total>0?'show':''}">
+      <div class="complete-title">🏆 今日のトレーニング完了！</div>
+      <div class="complete-sub">颯希、最高のトレーニングだった！<br>しっかり休んで明日に備えよう。</div>
+    </div>
+    <div class="exercises-card">${day.exercises.map((ex,i)=>{
+      const isDone=!!checked[key(currentDay,i)];
+      return `<div class="ex-item ${isDone?'done':''}" onclick="toggleEx(${i})">
+        <div class="check-btn ${isDone?'done':''}">✓</div>
+        <div class="ex-text"><div class="ex-name">${ex.name}</div><div class="ex-detail">${ex.detail}</div></div>
+      </div>`;
+    }).join('')}</div>
+    ${renderWeekly()}
+    <button class="reset-btn" onclick="resetDay()">今日をリセット</button>
+    <div style="height:12px"></div>`;
+}
+
+function toggleEx(i) {
+  const k=key(currentDay,i); checked[k]=!checked[k]; saveChecked();
+  document.getElementById('streak-num').textContent=calcStreak();
+  renderTabs(); renderContent();
+}
+function switchDay(i) { currentDay=i; renderTabs(); renderContent(); }
+function resetDay() {
+  if(!confirm('今日のチェックをリセットしますか？'))return;
+  DAYS[currentDay].exercises.forEach((_,i)=>delete checked[key(currentDay,i)]);
+  saveChecked(); renderTabs(); renderContent();
+}
+
+/* 管理画面 */
+function openAdmin() {
+  adminDay=currentDay;
+  document.getElementById('admin-overlay').classList.add('show');
+  document.getElementById('admin-sheet').classList.add('show');
+  renderAdminTabs(); renderAdminEditor();
+}
+function closeAdmin() {
+  document.getElementById('admin-overlay').classList.remove('show');
+  document.getElementById('admin-sheet').classList.remove('show');
+}
+function renderAdminTabs() {
+  document.getElementById('admin-day-tabs').innerHTML = DAYS.map((d,i)=>
+    `<div class="admin-day-tab ${i===adminDay?'active':''}" onclick="switchAdminDay(${i})">${d.label}曜</div>`
+  ).join('');
+}
+function switchAdminDay(i) { adminDay=i; renderAdminTabs(); renderAdminEditor(); }
+function renderAdminEditor() {
+  const day=DAYS[adminDay], isRest=!!day.fullRest;
+  document.getElementById('admin-editor').innerHTML = `
+    <div class="admin-label">テーマ名</div>
+    <input class="admin-input" id="edit-name" value="${day.name}" placeholder="例：下半身＆体幹">
+    <div class="rest-toggle">
+      <span class="rest-toggle-label">🌙 完全休養日にする</span>
+      <label class="toggle"><input type="checkbox" id="edit-fullrest" ${isRest?'checked':''} onchange="toggleRestMode()"><span class="toggle-slider"></span></label>
+    </div>
+    <div id="ex-editor" style="${isRest?'opacity:0.3;pointer-events:none':''}">
+      <div class="admin-label">種目リスト</div>
+      <div class="admin-ex-list" id="admin-ex-list">
+        ${day.exercises.map((ex,i)=>`
+          <div class="admin-ex-card">
+            <div class="admin-ex-row">
+              <div class="admin-ex-inputs">
+                <input class="admin-ex-input" id="ex-name-${i}" value="${ex.name}" placeholder="種目名（例：スクワット）">
+                <input class="admin-ex-input detail" id="ex-detail-${i}" value="${ex.detail}" placeholder="詳細（例：3セット×15回）">
+              </div>
+              <button class="del-btn" onclick="deleteExercise(${i})">×</button>
+            </div>
+          </div>`).join('')}
+      </div>
+      <button class="add-ex-btn" onclick="addExercise()">＋ 種目を追加</button>
+    </div>`;
+}
+function toggleRestMode() {
+  const isRest=document.getElementById('edit-fullrest').checked;
+  const ed=document.getElementById('ex-editor');
+  ed.style.opacity=isRest?'0.3':'1'; ed.style.pointerEvents=isRest?'none':'';
+}
+function addExercise() {
+  const day=DAYS[adminDay]; const i=day.exercises.length;
+  day.exercises.push({name:'',detail:''});
+  const div=document.createElement('div');
+  div.innerHTML=`<div class="admin-ex-card"><div class="admin-ex-row"><div class="admin-ex-inputs"><input class="admin-ex-input" id="ex-name-${i}" placeholder="種目名（例：スクワット）"><input class="admin-ex-input detail" id="ex-detail-${i}" placeholder="詳細（例：3セット×15回）"></div><button class="del-btn" onclick="deleteExercise(${i})">×</button></div></div>`;
+  document.getElementById('admin-ex-list').appendChild(div.firstChild);
+  document.getElementById(`ex-name-${i}`).focus();
+}
+function deleteExercise(i) {
+  if(!confirm('この種目を削除しますか？'))return;
+  DAYS[adminDay].exercises.splice(i,1);
+  renderAdminEditor();
+}
+function saveAdmin() {
+  const day=DAYS[adminDay];
+  day.name=document.getElementById('edit-name').value||day.name;
+  day.fullRest=document.getElementById('edit-fullrest').checked;
+  day.rest=day.fullRest;
+  const count=document.querySelectorAll('[id^="ex-name-"]').length;
+  const exs=[];
+  for(let i=0;i<count;i++){
+    const n=document.getElementById(`ex-name-${i}`);
+    const d=document.getElementById(`ex-detail-${i}`);
+    if(n&&n.value.trim()) exs.push({name:n.value.trim(),detail:d?d.value.trim():''});
+  }
+  day.exercises=exs;
+  saveDays(DAYS); closeAdmin(); renderTabs(); renderContent();
+  const t=document.getElementById('saved-toast'); t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+window.addEventListener('load',()=>setTimeout(()=>document.getElementById('splash').classList.add('hide'),1200));
+document.getElementById('today-label').textContent=new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+document.getElementById('streak-num').textContent=calcStreak();
+renderTabs(); renderContent();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
