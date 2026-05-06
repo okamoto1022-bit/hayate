@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="颯希トレ">
+<meta name="theme-color" content="#E8321A">
+<link rel="manifest" href="manifest.json">
+<title>颯希のトレーニング</title>
+
+<!-- スプラッシュ画面（iPhone用） -->
+<meta name="apple-touch-startup-image" content="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+
+<style>
+  :root {
+    --red: #E8321A;
+    --red-dark: #C0280F;
+    --green: #1A9E6A;
+    --green-light: #E6F7F1;
+    --bg: #F7F6F4;
+    --card: #FFFFFF;
+    --text: #1A1A1A;
+    --text-sub: #888;
+    --border: rgba(0,0,0,0.08);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overscroll-behavior: none;
+  }
+
+  /* スプラッシュ */
+  #splash {
+    position: fixed; inset: 0;
+    background: var(--red);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 999;
+    transition: opacity 0.5s ease;
+  }
+  #splash.hide { opacity: 0; pointer-events: none; }
+  .splash-icon { font-size: 80px; margin-bottom: 16px; }
+  .splash-title { font-size: 28px; font-weight: 700; color: white; letter-spacing: -0.5px; }
+  .splash-sub { font-size: 14px; color: rgba(255,255,255,0.7); margin-top: 8px; }
+
+  /* HEADER */
+  .header {
+    background: var(--red);
+    padding: calc(env(safe-area-inset-top, 44px) + 12px) 20px 18px;
+    color: white;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header-row { display: flex; justify-content: space-between; align-items: flex-start; }
+  .app-name { font-size: 11px; font-weight: 500; letter-spacing: 2px; opacity: 0.7; text-transform: uppercase; margin-bottom: 3px; }
+  .app-title { font-size: 22px; font-weight: 700; }
+  .streak-pill {
+    background: rgba(255,255,255,0.2);
+    border-radius: 99px; padding: 6px 12px;
+    font-size: 13px; font-weight: 500;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .today-label { font-size: 13px; opacity: 0.75; margin-top: 8px; }
+
+  /* TABS */
+  .tabs-wrap {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    display: flex; overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; padding: 0 4px;
+    position: sticky; top: calc(env(safe-area-inset-top, 44px) + 78px); z-index: 9;
+  }
+  .tabs-wrap::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0; min-width: 44px;
+    padding: 11px 10px 9px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer; border-bottom: 3px solid transparent;
+    transition: all 0.15s; color: var(--text-sub);
+  }
+  .tab-day { font-size: 14px; font-weight: 700; }
+  .tab-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: background 0.2s; }
+  .tab.active { color: var(--red); border-bottom-color: var(--red); }
+  .tab.done .tab-dot { background: var(--green); }
+  .tab.is-today .tab-day { color: var(--red); }
+
+  /* CONTENT */
+  .content { padding: 16px; padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 16px); }
+
+  .day-header {
+    background: var(--card); border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 12px;
+    border: 1px solid var(--border);
+  }
+  .day-theme { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--red); text-transform: uppercase; margin-bottom: 2px; }
+  .day-name { font-size: 18px; font-weight: 700; }
+
+  /* PROGRESS */
+  .progress-card {
+    background: var(--card); border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 12px;
+    border: 1px solid var(--border);
+  }
+  .progress-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .progress-label { font-size: 13px; color: var(--text-sub); }
+  .progress-count { font-size: 15px; font-weight: 700; }
+  .bar-bg { height: 8px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--green); border-radius: 99px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+
+  /* EXERCISES */
+  .exercises-card {
+    background: var(--card); border-radius: var(--radius);
+    border: 1px solid var(--border); margin-bottom: 12px; overflow: hidden;
+  }
+  .ex-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background 0.1s;
+    -webkit-user-select: none; user-select: none;
+  }
+  .ex-item:last-child { border-bottom: none; }
+  .ex-item:active { background: var(--bg); }
+  .check-btn {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg); transition: all 0.2s;
+    font-size: 14px; color: transparent;
+  }
+  .check-btn.done { background: var(--green); border-color: var(--green); color: white; }
+  .ex-text { flex: 1; min-width: 0; }
+  .ex-name { font-size: 15px; font-weight: 500; line-height: 1.3; transition: color 0.2s; }
+  .ex-item.done .ex-name { color: var(--text-sub); text-decoration: line-through; text-decoration-color: var(--green); }
+  .ex-detail { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+
+  /* COMPLETE */
+  .complete-banner {
+    background: var(--green-light); border: 1px solid rgba(26,158,106,0.2);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 12px; display: none;
+  }
+  .complete-banner.show { display: block; }
+  .complete-title { font-size: 16px; font-weight: 700; color: var(--green); margin-bottom: 3px; }
+  .complete-sub { font-size: 13px; color: #1A9E6A; opacity: 0.85; }
+
+  /* REST */
+  .rest-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 36px 20px;
+    text-align: center; margin-bottom: 12px;
+  }
+  .rest-emoji { font-size: 48px; margin-bottom: 14px; }
+  .rest-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .rest-sub { font-size: 14px; color: var(--text-sub); line-height: 1.8; }
+
+  /* WEEKLY */
+  .weekly-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px;
+  }
+  .weekly-title { font-size: 11px; font-weight: 700; color: var(--text-sub); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+  .dots-row { display: flex; gap: 4px; }
+  .dot-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .dot-circle {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--bg); border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--text-sub);
+    transition: all 0.2s;
+  }
+  .dot-circle.done { background: var(--green); border-color: var(--green); color: white; font-size: 15px; }
+  .dot-circle.rest { background: #E6EEFF; border-color: rgba(26,106,232,0.2); color: #1A6AE8; }
+  .dot-circle.today-ring { box-shadow: 0 0 0 2.5px var(--red); }
+  .dot-label { font-size: 10px; color: var(--text-sub); }
+
+  /* RESET */
+  .reset-btn {
+    width: 100%; padding: 13px;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 13px;
+    color: var(--text-sub); font-family: inherit; cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .reset-btn:active { background: var(--bg); }
+
+  /* OFFLINE BADGE */
+  .offline-badge {
+    position: fixed; bottom: calc(env(safe-area-inset-bottom,20px) + 12px);
+    left: 50%; transform: translateX(-50%);
+    background: #333; color: white; font-size: 12px;
+    padding: 8px 16px; border-radius: 99px;
+    display: none; z-index: 100;
+  }
+  .offline-badge.show { display: block; }
+</style>
+</head>
+<body>
+
+<!-- スプラッシュ画面 -->
+<div id="splash">
+  <div class="splash-icon">⚡</div>
+  <div class="splash-title">颯希のトレーニング</div>
+  <div class="splash-sub">中学生・短距離・室内対応</div>
+</div>
+
+<div class="offline-badge" id="offline-badge">📵 オフラインモード</div>
+
+<div class="header">
+  <div class="header-row">
+    <div>
+      <div class="app-name">Hayate Training</div>
+      <div class="app-title">颯希のトレーニング</div>
+    </div>
+    <div class="streak-pill">🔥 <span id="streak-num">0</span>日連続</div>
+  </div>
+  <div class="today-label" id="today-label"></div>
+</div>
+
+<div class="tabs-wrap" id="tabs"></div>
+<div class="content" id="content"></div>
+
+<script>
+const DAYS = [
+  { label:'月', theme:'MONDAY', name:'下半身＆体幹', exercises:[
+    {name:'ウォームアップ・ストレッチ', detail:'5分'},
+    {name:'スクワット（3秒ゆっくり下げる）', detail:'3セット × 15回'},
+    {name:'ランジ（左右交互）', detail:'3セット × 10回'},
+    {name:'片脚デッドリフト（バランス重視）', detail:'2セット × 8回'},
+    {name:'プランク', detail:'30秒 × 3セット'},
+    {name:'クールダウン・ストレッチ', detail:'5分'},
+  ]},
+  { label:'火', theme:'TUESDAY', name:'スプリントドリル', exercises:[
+    {name:'ウォームアップ', detail:'5分'},
+    {name:'その場もも上げ（全力）', detail:'5秒 × 5本 ／ 間30秒休憩'},
+    {name:'腕振りドリル（椅子に座って）', detail:'30秒 × 4セット'},
+    {name:'踵引きつけ（その場）', detail:'5秒 × 5本'},
+    {name:'体幹ツイスト', detail:'20回 × 3セット'},
+    {name:'クールダウン・ストレッチ', detail:'5分'},
+  ]},
+  { label:'水', theme:'WEDNESDAY', name:'アクティブ休養', rest:true, exercises:[
+    {name:'全身ストレッチ', detail:'15〜20分'},
+    {name:'股関節まわし・足首回し', detail:'各方向10回'},
+    {name:'呼吸法（鼻4秒・口8秒）', detail:'5分'},
+  ]},
+  { label:'木', theme:'THURSDAY', name:'爆発力＆上半身', exercises:[
+    {name:'ウォームアップ', detail:'5分'},
+    {name:'ジャンプスクワット（着地はゆっくり・静音）', detail:'3セット × 8回'},
+    {name:'腕立て伏せ（肩甲骨を意識）', detail:'3セット × 12回'},
+    {name:'ヒップリフト（片足）', detail:'3セット × 12回'},
+    {name:'バーピー（静音版）', detail:'5回 × 3セット'},
+    {name:'クールダウン・ストレッチ', detail:'5分'},
+  ]},
+  { label:'金', theme:'FRIDAY', name:'スプリントドリル強化', exercises:[
+    {name:'ウォームアップ', detail:'5分'},
+    {name:'その場もも上げ（全力）', detail:'7秒 × 6本 ／ 間45秒休憩'},
+    {name:'壁押しドリル（スタートフォーム）', detail:'10秒 × 5本'},
+    {name:'腕振り＋足踏み連動', detail:'30秒 × 4セット'},
+    {name:'コアブレーシング（体幹を固める）', detail:'5秒 × 10回'},
+    {name:'クールダウン・ストレッチ', detail:'5分'},
+  ]},
+  { label:'土', theme:'SATURDAY', name:'強化 or 屋外', exercises:[
+    {name:'公園ダッシュ30m（天気が良ければ）', detail:'5本'},
+    {name:'室内の場合：月＋木の複合（70%強度）', detail:'約40分'},
+    {name:'クールダウン・ストレッチ', detail:'10分'},
+  ]},
+  { label:'日', theme:'SUNDAY', name:'完全休養', fullRest:true, rest:true, exercises:[] },
+];
+
+const todayIdx = (() => { const d = new Date().getDay(); return d===0?6:d-1; })();
+let currentDay = todayIdx;
+let checked = (() => { try { return JSON.parse(localStorage.getItem('h_checked')||'{}'); } catch { return {}; } })();
+
+function save() { localStorage.setItem('h_checked', JSON.stringify(checked)); }
+function key(d,e) { return `d${d}_e${e}`; }
+function isDayDone(di) {
+  const day = DAYS[di];
+  if (day.fullRest) return true;
+  return day.exercises.length > 0 && day.exercises.every((_,i) => checked[key(di,i)]);
+}
+function countDone(di) { return DAYS[di].exercises.filter((_,i) => checked[key(di,i)]).length; }
+function calcStreak() {
+  let s = 0;
+  for (let i = todayIdx; i >= 0; i--) { if (isDayDone(i)) s++; else break; }
+  return s;
+}
+
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = DAYS.map((d,i) =>
+    `<div class="tab ${i===currentDay?'active':''} ${isDayDone(i)?'done':''} ${i===todayIdx?'is-today':''}" onclick="switchDay(${i})">
+      <span class="tab-day">${d.label}</span>
+      <span class="tab-dot"></span>
+    </div>`
+  ).join('');
+}
+
+function renderWeekly() {
+  return `<div class="weekly-card">
+    <div class="weekly-title">今週の進捗</div>
+    <div class="dots-row">${DAYS.map((d,i) => {
+      const done = isDayDone(i);
+      const cls = done ? 'done' : d.fullRest ? 'rest' : '';
+      const ring = i===todayIdx ? 'today-ring' : '';
+      const inner = done ? '✓' : d.fullRest ? '🌙' : d.label;
+      return `<div class="dot-col"><div class="dot-circle ${cls} ${ring}">${inner}</div><div class="dot-label">${d.label}</div></div>`;
+    }).join('')}</div>
+  </div>`;
+}
+
+function renderContent() {
+  const day = DAYS[currentDay];
+  const el = document.getElementById('content');
+
+  if (day.fullRest) {
+    el.innerHTML = `
+      <div class="rest-card">
+        <div class="rest-emoji">🌙</div>
+        <div class="rest-title">今日は完全休養日</div>
+        <div class="rest-sub">食事・睡眠を最優先。<br>成長ホルモンは休養中に分泌される！<br>しっかり休むことも練習のうち。</div>
+      </div>${renderWeekly()}`;
+    return;
+  }
+
+  const total = day.exercises.length;
+  const done = countDone(currentDay);
+  const pct = total ? Math.round(done/total*100) : 0;
+
+  el.innerHTML = `
+    <div class="day-header">
+      <div class="day-theme">${day.theme}</div>
+      <div class="day-name">${day.name}</div>
+    </div>
+    <div class="progress-card">
+      <div class="progress-row">
+        <span class="progress-label">今日の進捗</span>
+        <span class="progress-count">${done} / ${total}</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="complete-banner ${done===total?'show':''}">
+      <div class="complete-title">🏆 今日のトレーニング完了！</div>
+      <div class="complete-sub">颯希、最高のトレーニングだった！<br>しっかり休んで明日に備えよう。</div>
+    </div>
+    <div class="exercises-card">${day.exercises.map((ex,i) => {
+      const isDone = !!checked[key(currentDay,i)];
+      return `<div class="ex-item ${isDone?'done':''}" onclick="toggleEx(${i})">
+        <div class="check-btn ${isDone?'done':''}">✓</div>
+        <div class="ex-text">
+          <div class="ex-name">${ex.name}</div>
+          <div class="ex-detail">${ex.detail}</div>
+        </div>
+      </div>`;
+    }).join('')}</div>
+    ${renderWeekly()}
+    <button class="reset-btn" onclick="resetDay()">今日をリセット</button>
+    <div style="height:12px"></div>`;
+}
+
+function toggleEx(i) {
+  const k = key(currentDay,i);
+  checked[k] = !checked[k];
+  save();
+  document.getElementById('streak-num').textContent = calcStreak();
+  renderTabs(); renderContent();
+}
+function switchDay(i) { currentDay=i; renderTabs(); renderContent(); }
+function resetDay() {
+  if (!confirm('今日のチェックをリセットしますか？')) return;
+  DAYS[currentDay].exercises.forEach((_,i) => delete checked[key(currentDay,i)]);
+  save(); renderTabs(); renderContent();
+}
+
+// オフライン検出
+window.addEventListener('online', () => document.getElementById('offline-badge').classList.remove('show'));
+window.addEventListener('offline', () => document.getElementById('offline-badge').classList.add('show'));
+
+// スプラッシュ非表示
+window.addEventListener('load', () => {
+  setTimeout(() => document.getElementById('splash').classList.add('hide'), 1200);
+});
+
+// 初期化
+const d = new Date();
+document.getElementById('today-label').textContent = d.toLocaleDateString('ja-JP', {year:'numeric',month:'long',day:'numeric',weekday:'long'});
+document.getElementById('streak-num').textContent = calcStreak();
+renderTabs(); renderContent();
+
+// Service Worker登録
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "颯希のトレーニング",
+  "short_name": "颯希トレ",
+  "description": "中学生短距離選手・室内トレーニングチェックアプリ",
+  "start_url": "/hayate/",
+  "display": "standalone",
+  "background_color": "#E8321A",
+  "theme_color": "#E8321A",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
